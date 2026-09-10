@@ -6,7 +6,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -123,4 +125,160 @@
 
 button {
   cursor: pointer;
+}
+/* ============================================================
+   LearnEarn — 2026 premium fintech design layer
+   ============================================================ */
+
+:root {
+  --le-bg: #0b0b0f;
+  --le-bg-raise: #101017;
+  --le-violet: #8b5cf6;
+  --le-violet-bright: #a78bfa;
+  --le-violet-deep: #6d28d9;
+  --le-indigo: #4f46e5;
+  --le-cyan: #22d3ee;
+  --le-gold: #f5b301;
+  --le-hairline: rgba(255, 255, 255, 0.08);
+}
+
+html,
+body {
+  background-color: var(--le-bg);
+}
+
+/* --- Surfaces ------------------------------------------------ */
+
+/* Translucent glass panel used by the wallet card, banners and nav bars. */
+.le-glass {
+  background-image: linear-gradient(
+    155deg,
+    rgba(255, 255, 255, 0.075) 0%,
+    rgba(255, 255, 255, 0.028) 42%,
+    rgba(255, 255, 255, 0.012) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.11),
+    0 24px 60px -28px rgba(0, 0, 0, 0.9);
+}
+
+/* Flatter, darker panel for secondary containers. */
+.le-panel {
+  background-image: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.018) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Fine grain overlay so large dark areas never look flat. */
+.le-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* --- Motion -------------------------------------------------- */
+
+@keyframes le-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.le-rise {
+  animation: le-rise 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes le-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+.le-float {
+  animation: le-float 5.5s ease-in-out infinite;
+}
+
+@keyframes le-breathe {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.le-breathe {
+  animation: le-breathe 3.6s ease-in-out infinite;
+}
+
+/* Slow ambient movement for the background gradient mesh blobs. */
+@keyframes le-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(7%, -6%, 0) scale(1.1);
+  }
+  66% {
+    transform: translate3d(-6%, 5%, 0) scale(0.94);
+  }
+}
+.le-drift {
+  animation: le-drift 20s ease-in-out infinite;
+}
+
+/* Light sweep across the withdraw button. */
+@keyframes le-sheen {
+  0% {
+    transform: translateX(-140%) skewX(-18deg);
+  }
+  55%,
+  100% {
+    transform: translateX(320%) skewX(-18deg);
+  }
+}
+.le-sheen {
+  animation: le-sheen 5s ease-in-out infinite;
+}
+
+/* --- Utilities ----------------------------------------------- */
+
+.le-no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.le-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Numerals stay perfectly aligned when the balance is toggled. */
+.le-tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .le-rise,
+  .le-float,
+  .le-breathe,
+  .le-drift,
+  .le-sheen {
+    animation: none !important;
+  }
 }

@@ -1,129 +1,157 @@
 "use client";
 
-import { useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "@/lib/auth-client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useSearchParams } from "next/navigation";
+import { AlertCircle, Eye, EyeOff } from "lucide-react";
+import { signIn } from "@/lib/auth-client";
+import { AuthField, AuthShell, AuthSubmit } from "@/components/learnearn/auth-shell";
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [show, setShow] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [formError, setFormError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const validate = () => {
+    const next: { email?: string; password?: string } = {};
+    if (!email.trim()) next.email = "Enter your email address.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+      next.email = "That email address doesn't look right.";
+    if (!password) next.password = "Enter your password.";
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setFormError("");
+    if (!validate()) return;
+
     setLoading(true);
-
     try {
-      const result = await signIn.email({
-        email,
-        password,
-      });
+      const result = await signIn.email({ email: email.trim(), password });
 
-      // Check if login was successful
       if (result.error) {
-        setError(result.error.message || "Error signing in. Please check your credentials.");
+        console.error("[login] sign in failed:", result.error);
+        setFormError(result.error.message || "Wrong email or password. Please try again.");
         setLoading(false);
         return;
       }
 
-      // If we get here, login was successful
-      // Wait a bit for cookie to be set, then do a full page reload
+      console.log("[login] signed in, redirecting to", redirect);
       setTimeout(() => {
         window.location.href = redirect;
-      }, 500);
+      }, 400);
     } catch (err: any) {
-      console.error("Login error:", err);
-      setError(err.message || "Error signing in. Please check your credentials.");
+      console.error("[login] unexpected error:", err);
+      setFormError(err?.message || "Could not sign you in. Please try again.");
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-background to-muted/20">
-      <Card className="w-full max-w-md shadow-xl border-2">
-        <CardHeader className="space-y-2 text-center pb-6">
-          <CardTitle className="text-3xl font-bold tracking-tight">Welcome Back</CardTitle>
-          <CardDescription className="text-base">
-            Enter your email and password to access your account
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-5">
-            {error && (
-              <Alert variant="destructive" className="animate-in fade-in slide-in-from-top-2">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-semibold">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="h-11 transition-all focus:ring-2"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-semibold">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="h-11 transition-all focus:ring-2"
-              />
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4 pt-4">
-            <Button
-              type="submit"
-              className="w-full h-11 text-base font-semibold transition-all hover:scale-[1.02]"
-              disabled={loading}
+    <AuthShell
+      title="Welcome back 👋"
+      subtitle="Sign in to keep learning, earning and growing."
+      footer={
+        <p className="text-[12.5px] text-white/45">
+          New to LearnEarn?{" "}
+          <Link
+            href="/register"
+            className="font-semibold text-[#C4B5FD] transition-colors duration-300 hover:text-white"
+          >
+            Create an account
+          </Link>
+        </p>
+      }
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+        {formError && (
+          <div
+            role="alert"
+            className="flex items-start gap-2.5 rounded-2xl border border-[#F87171]/28 bg-[#F87171]/[0.09] p-3.5"
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#F87171]" strokeWidth={2.2} />
+            <p className="text-[12px] leading-relaxed font-medium text-[#FCA5A5]">{formError}</p>
+          </div>
+        )}
+
+        <AuthField
+          id="email"
+          label="Email Address"
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(v) => {
+            setEmail(v);
+            if (errors.email) setErrors((e) => ({ ...e, email: undefined }));
+          }}
+          error={errors.email}
+        />
+
+        <div>
+          <AuthField
+            id="password"
+            label="Password"
+            type={show ? "text" : "password"}
+            autoComplete="current-password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(v) => {
+              setPassword(v);
+              if (errors.password) setErrors((e) => ({ ...e, password: undefined }));
+            }}
+            error={errors.password}
+            trailing={
+              <button
+                type="button"
+                onClick={() => setShow((s) => !s)}
+                aria-label={show ? "Hide password" : "Show password"}
+                className="grid h-7 w-7 place-items-center rounded-full text-white/40 transition-all duration-300 hover:bg-white/10 hover:text-white active:scale-90"
+              >
+                {show ? (
+                  <EyeOff className="h-[15px] w-[15px]" strokeWidth={2} />
+                ) : (
+                  <Eye className="h-[15px] w-[15px]" strokeWidth={2} />
+                )}
+              </button>
+            }
+          />
+          <div className="mt-2 flex justify-end">
+            <Link
+              href="/forgot-password"
+              className="text-[11.5px] font-semibold text-[#A78BFA] transition-colors duration-300 hover:text-white"
             >
-              {loading ? "Signing in..." : "Sign In"}
-            </Button>
-            <div className="text-sm text-center text-muted-foreground">
-              Don&apos;t have an account?{" "}
-              <Link href="/register" className="font-semibold text-primary hover:underline transition-colors">
-                Sign up here
-              </Link>
-            </div>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
+              Forgot Password?
+            </Link>
+          </div>
+        </div>
+
+        <AuthSubmit loading={loading} loadingLabel="Signing in…">
+          Sign In
+        </AuthSubmit>
+      </form>
+    </AuthShell>
   );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-background to-muted/20">
-        <Card className="w-full max-w-md shadow-xl border-2">
-          <CardHeader className="space-y-2 text-center pb-6">
-            <CardTitle className="text-3xl font-bold tracking-tight">Welcome Back</CardTitle>
-            <CardDescription className="text-base">Loading...</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="grid min-h-screen place-items-center bg-[#0B0B0F] text-[13px] text-white/40">
+          Loading…
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );

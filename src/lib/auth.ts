@@ -30,20 +30,20 @@ export const auth = betterAuth({
     // =========================================================================
     // Required: Create /forgot-password and /reset-password pages
     // -------------------------------------------------------------------------
-    // sendResetPassword: async ({ user, url }) => {
-    //   await totalumSdk.email.sendEmail({
-    //     to: [user.email],
-    //     subject: "Reset your password",
-    //     html: `
-    //       <h2>Password Reset Request</h2>
-    //       <p>Click the link below to reset your password:</p>
-    //       <p><a href="${url}">Reset Password</a></p>
-    //       <p>If you didn't request this, ignore this email.</p>
-    //       <p>This link expires in 1 hour.</p>
-    //     `,
-    //   });
-    // },
-    // resetPasswordTokenExpiresIn: 3600,
+    sendResetPassword: async ({ user, url }) => {
+      await totalumSdk.email.sendEmail({
+        to: [user.email],
+        subject: "Reset your LearnEarn password",
+        html: `
+          <h2>Password Reset Request</h2>
+          <p>Click the link below to choose a new LearnEarn password:</p>
+          <p><a href="${url}">Reset Password</a></p>
+          <p>If you didn't request this, you can safely ignore this email.</p>
+          <p>This link expires in 1 hour.</p>
+        `,
+      });
+    },
+    resetPasswordTokenExpiresIn: 3600,
   },
 
   // ===========================================================================
@@ -247,7 +247,17 @@ export const auth = betterAuth({
   // ============================================================================
   user: {
     additionalFields: {
-      // Add your custom user fields here (see examples above)
+      // Collected on the LearnEarn registration form.
+      phone: {
+        type: "string",
+        required: false,
+        input: true,
+      },
+      referral_code: {
+        type: "string",
+        required: false,
+        input: true,
+      },
     },
   },
 });
@@ -255,3 +265,16 @@ export const auth = betterAuth({
 // Base types from Better Auth
 export type Session = typeof auth.$Infer.Session;
 export type User = Session["user"];
+
+/** Session user plus the LearnEarn custom fields. */
+export interface ExtendedUser {
+  id: string;
+  email: string;
+  name: string;
+  image?: string | null;
+  emailVerified: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  phone?: string;
+  referral_code?: string;
+}

@@ -1,47 +1,49 @@
 "use client";
 
+import Link from "next/link";
 import { Headphones, KeyRound, TrendingUp, WalletMinimal } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 type QuickAction = {
   label: string;
+  href: string;
   icon: LucideIcon;
-  /** Tailwind gradient stops for the icon medallion. */
   gradient: string;
-  /** Matching ambient glow colour. */
   glow: string;
 };
 
 const ACTIONS: QuickAction[] = [
   {
     label: "Upgrade",
+    href: "/upgrade",
     icon: TrendingUp,
     gradient: "from-[#A78BFA] to-[#7C3AED]",
     glow: "rgba(139,92,246,0.85)",
   },
   {
     label: "Earn More",
+    href: "/earn",
     icon: WalletMinimal,
     gradient: "from-[#8B5CF6] to-[#5B21B6]",
     glow: "rgba(124,58,237,0.8)",
   },
   {
     label: "Support",
+    href: "/support",
     icon: Headphones,
     gradient: "from-[#38BDF8] to-[#6366F1]",
     glow: "rgba(56,189,248,0.75)",
   },
   {
     label: "BUY Naira Code",
+    href: "/buy-naira-code",
     icon: KeyRound,
     gradient: "from-[#22D3EE] to-[#8B5CF6]",
     glow: "rgba(34,211,238,0.7)",
   },
 ];
 
-/**
- * Four premium shortcut tiles under a compact section heading.
- */
+/** Four premium shortcut tiles that route to the main feature pages. */
 export function QuickAccess() {
   return (
     <section className="le-rise mt-7" style={{ animationDelay: "300ms" }}>
@@ -50,13 +52,11 @@ export function QuickAccess() {
       </h2>
 
       <div className="mt-3.5 grid grid-cols-4 gap-2.5">
-        {ACTIONS.map(({ label, icon: Icon, gradient, glow }, i) => (
-          <button
+        {ACTIONS.map(({ label, href, icon: Icon, gradient, glow }) => (
+          <Link
             key={label}
-            type="button"
-            onClick={() => console.log("[QuickAccess] action tapped:", label)}
+            href={href}
             className="group flex flex-col items-center gap-2.5 rounded-2xl border border-white/[0.06] bg-white/[0.025] px-1.5 py-3.5 transition-all duration-300 hover:-translate-y-1 hover:border-white/15 hover:bg-white/[0.06] active:scale-95"
-            style={{ animationDelay: `${340 + i * 60}ms` }}
           >
             <span className="relative">
               <span
@@ -74,7 +74,7 @@ export function QuickAccess() {
             <span className="text-center text-[10.5px] leading-[1.25] font-semibold text-white/70 transition-colors duration-300 group-hover:text-white">
               {label}
             </span>
-          </button>
+          </Link>
         ))}
       </div>
     </section>

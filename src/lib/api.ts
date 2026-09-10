@@ -51,4 +51,13 @@ export const api = {
   delete<T>(url: string): Promise<ApiResponse<T>> {
     return request<T>(url, { method: "DELETE" });
   },
+
+  /**
+   * POSTs multipart/form-data (file uploads).
+   * The Content-Type header is deliberately omitted so the browser can add
+   * the multipart boundary itself.
+   */
+  upload<T>(url: string, form: FormData): Promise<ApiResponse<T>> {
+    return request<T>(url, { method: "POST", body: form });
+  },
 };

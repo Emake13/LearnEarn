@@ -7,6 +7,7 @@ import { ScriptExecutor } from "@/components/ScriptExecutor";
 import { DevToolsHandler } from "@/components/DevToolsHandler";
 import { GlobalErrorCatcher } from "@/components/GlobalErrorCatcher";
 import { TemporalLinkBanner } from "@/components/TemporalLinkBanner";
+import { AppStateProvider } from "@/components/learnearn/app-state";
 
 /** Display face — geometric, confident, used for the logo, balances and headings. */
 const sora = Sora({
@@ -52,9 +53,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <DevToolsHandler />
         {/* Development-preview only banner. Kept outside the page wrapper so it never covers content. */}
         <TemporalLinkBanner />
-        <div className="min-h-screen flex flex-col">
-          <main className="flex-1">{children}</main>
-        </div>
+        {/*
+          Mounted once for the whole app lifetime so the wallet balance is a
+          single, truly global reactive value: a claim, task reward or
+          withdrawal updates this one instance and every screen that reads
+          useAppState() re-renders immediately, with no re-fetch or flicker
+          when navigating between pages.
+        */}
+        <AppStateProvider>
+          <div className="min-h-screen flex flex-col">
+            <main className="flex-1">{children}</main>
+          </div>
+        </AppStateProvider>
       </body>
     </html>
   );

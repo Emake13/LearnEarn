@@ -1,15 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { Bell } from "lucide-react";
+import { Bell, Wallet } from "lucide-react";
 import { files } from "@assets/files";
+import { formatNairaShort } from "@/lib/learnearn-config";
+import { useAppState } from "./app-state";
 import { Logo } from "./logo";
 import { SideMenu } from "./side-menu";
 
+const HIDDEN_SHORT = "₦••••";
+
 /**
  * Sticky, blurred top bar: hamburger • centered logotype • notifications + avatar.
+ * Also surfaces the live wallet balance from the shared app state, so it
+ * updates instantly on every screen the moment a claim, task or withdrawal
+ * changes it — no separate fetch needed here.
  */
 export function TopNav({ unread = 1 }: { unread?: number }) {
+  const { profile, loading, balanceHidden } = useAppState();
+
   return (
     <header className="sticky top-0 z-40 -mx-5 mb-1 border-b border-white/[0.05] bg-[#0B0B0F]/72 px-5 backdrop-blur-2xl backdrop-saturate-150">
       <div className="grid h-16 grid-cols-[auto_1fr_auto] items-center gap-2">
@@ -22,6 +31,17 @@ export function TopNav({ unread = 1 }: { unread?: number }) {
         </div>
 
         <div className="flex items-center gap-2">
+          <Link
+            href="/wallet"
+            aria-label="View wallet balance"
+            className="le-tnum group flex items-center gap-1.5 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 transition-all duration-300 hover:border-[#8B5CF6]/45 hover:bg-white/[0.07] active:scale-95"
+          >
+            <Wallet className="h-[14px] w-[14px] text-[#C4B5FD]" strokeWidth={2.2} />
+            <span className="font-display text-[12.5px] font-bold text-white">
+              {loading ? "₦—" : balanceHidden ? HIDDEN_SHORT : formatNairaShort(profile?.balance ?? 0)}
+            </span>
+          </Link>
+
           <Link
             href="/activity"
             aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ""}`}

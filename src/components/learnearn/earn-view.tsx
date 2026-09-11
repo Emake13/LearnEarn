@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import {
-  BadgeCheck,
   Clock,
   Loader2,
   Megaphone,
@@ -24,22 +23,52 @@ const TYPE_META: Record<EarnTask["task_type"], { icon: LucideIcon; label: string
   sponsored: { icon: Megaphone, label: "Sponsored", tint: "#F5B301" },
 };
 
-/** Micro-task board. Completing a task credits its reward immediately. */
+/** "09:59" style countdown from a millisecond duration. */
+function formatCountdown(ms: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+/**
+ * Micro-task board. Tasks are repeatable: completing one credits its reward
+ * immediately, then locks it behind a countdown matching its duration until
+ * it automatically becomes available again.
+ */
 export function EarnView() {
   const { setProfile } = useAppState();
   const [tasks, setTasks] = useState<EarnTask[]>([]);
-  const [completed, setCompleted] = useState<string[]>([]);
+  // taskId -> timestamp (ms) at which the task unlocks again.
+  const [availableAt, setAvailableAt] = useState<Record<string, number>>({});
+  const [now, setNow] = useState(() => Date.now());
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
 
+  // Ticks every second so cooldown badges count down live and flip back to
+  // the "Start & earn" button the moment they hit 00:00, with no reload.
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   useEffect(() => {
     void (async () => {
-      const res = await api.get<{ tasks: EarnTask[]; completedTaskIds: string[] }>("/api/tasks");
+      const res = await api.get<{ tasks: EarnTask[]; lastCompletedAt: Record<string, string> }>(
+        "/api/tasks"
+      );
       if (res.ok && res.data) {
         setTasks(res.data.tasks);
-        setCompleted(res.data.completedTaskIds);
+        const map: Record<string, number> = {};
+        for (const task of res.data.tasks) {
+          const last = res.data.lastCompletedAt[task._id];
+          if (last) {
+            map[task._id] = new Date(last).getTime() + (task.duration_minutes || 0) * 60_000;
+          }
+        }
+        setAvailableAt(map);
       } else {
         console.error("[EarnView] could not load tasks:", res.error);
         setError(String(res.error || "Could not load tasks."));
@@ -62,7 +91,10 @@ export function EarnView() {
 
     if (res.ok && res.data) {
       setProfile(res.data.profile);
-      setCompleted((prev) => [...prev, task._id]);
+      setAvailableAt((prev) => ({
+        ...prev,
+        [task._id]: Date.now() + (task.duration_minutes || 0) * 60_000,
+      }));
       setToast(`${formatNairaShort(res.data.reward)} added to your wallet`);
     } else {
       console.error("[EarnView] completion failed:", res.error);
@@ -72,7 +104,7 @@ export function EarnView() {
   };
 
   const totalAvailable = tasks
-    .filter((t) => !completed.includes(t._id))
+    .filter((t) => (availableAt[t._id] ?? 0) <= now)
     .reduce((sum, t) => sum + (t.reward_amount || 0), 0);
 
   return (
@@ -115,7 +147,8 @@ export function EarnView() {
         {tasks.map((task, i) => {
           const meta = TYPE_META[task.task_type] || TYPE_META.quiz;
           const Icon = meta.icon;
-          const isDone = completed.includes(task._id);
+          const remainingMs = (availableAt[task._id] ?? 0) - now;
+          const onCooldown = remainingMs > 0;
           const isBusy = busyId === task._id;
 
           return (
@@ -161,10 +194,12 @@ export function EarnView() {
                 </span>
               </div>
 
-              {isDone ? (
-                <div className="mt-3.5 flex items-center justify-center gap-1.5 rounded-xl border border-[#4ADE80]/25 bg-[#4ADE80]/10 py-2.5">
-                  <BadgeCheck className="h-4 w-4 text-[#4ADE80]" strokeWidth={2.2} />
-                  <span className="text-[12px] font-bold text-[#4ADE80]">Completed</span>
+              {onCooldown ? (
+                <div className="mt-3.5 flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] py-2.5">
+                  <Clock className="h-4 w-4 text-white/40" strokeWidth={2.2} />
+                  <span className="le-tnum text-[12px] font-bold text-white/50">
+                    Available again in {formatCountdown(remainingMs)}
+                  </span>
                 </div>
               ) : (
                 <button

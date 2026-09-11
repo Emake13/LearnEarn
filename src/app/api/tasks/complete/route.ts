@@ -21,13 +21,20 @@ export async function POST(request: Request) {
     const task = taskResult.data as any;
     if (!task?._id) return fail("That task no longer exists", 404);
 
-    // Guard against double-crediting the same task.
+    // Tasks are repeatable, but only once the previous completion's
+    // cooldown (its duration_minutes) has fully elapsed.
     const existing = await totalumSdk.crud.query("user_task_completion", {
       _filter: { user: user._id, earn_task: taskId },
+      _sort: { completed_at: "desc" },
       _limit: 1,
     });
-    if (((existing.data as any[]) ?? []).length > 0) {
-      return fail("You have already completed this task", 409);
+    const last = ((existing.data as any[]) ?? [])[0];
+    if (last?.completed_at) {
+      const cooldownMs = (Number(task.duration_minutes) || 0) * 60_000;
+      const availableAt = new Date(last.completed_at).getTime() + cooldownMs;
+      if (Date.now() < availableAt) {
+        return fail("This task is still on cooldown", 409);
+      }
     }
 
     const reward = Number(task.reward_amount) || 0;

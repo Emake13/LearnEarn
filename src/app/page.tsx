@@ -6,6 +6,8 @@ import { WelcomeHeader } from "@/components/learnearn/welcome-header";
 import { WalletCard } from "@/components/learnearn/wallet-card";
 import { RewardsBanner } from "@/components/learnearn/rewards-banner";
 import { QuickAccess } from "@/components/learnearn/quick-access";
+import { PromoGrid } from "@/components/learnearn/promo-grid";
+import { TransactionHistory } from "@/components/learnearn/transaction-history";
 
 /**
  * LearnEarn entry point.
@@ -26,6 +28,8 @@ export default async function Main() {
       <WalletCard />
       <RewardsBanner />
       <QuickAccess />
+      <PromoGrid />
+      <TransactionHistory />
     </AppShell>
   );
 }

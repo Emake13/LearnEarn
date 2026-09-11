@@ -32,6 +32,7 @@ const MENU_ITEMS: { label: string; href: string; icon: LucideIcon }[] = [
   { label: "Dashboard", href: "/", icon: LayoutGrid },
   { label: "Earn More", href: "/earn", icon: Gift },
   { label: "Wallet & Payouts", href: "/wallet", icon: Wallet },
+  { label: "Withdraw", href: "/withdraw", icon: ArrowUpRight },
   { label: "Activity", href: "/activity", icon: NotebookText },
   { label: "Upgrade", href: "/upgrade", icon: TrendingUp },
   { label: "BUY Naira Code", href: "/buy-naira-code", icon: KeyRound },

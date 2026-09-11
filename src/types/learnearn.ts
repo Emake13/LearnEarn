@@ -37,6 +37,11 @@ export interface WalletTransaction {
   amount: number;
   status: "completed" | "pending" | "failed";
   createdAt: string;
+  /** Public reference, currently only written for withdrawal requests. */
+  reference?: string;
+  account_name?: string;
+  account_number?: string;
+  bank_name?: string;
 }
 
 export interface PaymentRequest {
@@ -62,4 +67,18 @@ export interface MeProfile {
   availableBalance: number;
   rewardClaimed: boolean;
   tierName: string;
+  /** ISO timestamp when the daily reward unlocks again, null when claimable now. */
+  nextClaimAt: string | null;
+  canClaim: boolean;
+}
+
+/** Receipt returned after a withdrawal request is filed for review. */
+export interface WithdrawalReceipt {
+  reference: string;
+  amount: number;
+  accountName: string;
+  accountNumber: string;
+  bankName: string;
+  status: "pending";
+  createdAt: string;
 }

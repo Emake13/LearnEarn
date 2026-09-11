@@ -21,6 +21,9 @@ interface AppState {
   /** Dashboard balance visibility, shared across every screen. */
   balanceHidden: boolean;
   toggleBalance: () => void;
+  /** Bumped whenever a wallet movement happens, so history lists re-fetch. */
+  transactionsVersion: number;
+  bumpTransactions: () => void;
 }
 
 const Ctx = createContext<AppState | null>(null);
@@ -33,6 +36,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfileState] = useState<MeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [balanceHidden, setBalanceHidden] = useState(false);
+  const [transactionsVersion, setTransactionsVersion] = useState(0);
 
   const refresh = useCallback(async () => {
     const res = await api.get<MeProfile>("/api/me");
@@ -60,8 +64,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
           console.log("[AppState] balance visibility ->", v ? "shown" : "hidden");
           return !v;
         }),
+      transactionsVersion,
+      bumpTransactions: () => setTransactionsVersion((v) => v + 1),
     }),
-    [profile, loading, refresh, balanceHidden]
+    [profile, loading, refresh, balanceHidden, transactionsVersion]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -4,14 +4,59 @@ import Link from "next/link";
 import { useState } from "react";
 import {
   ChevronDown,
+  ExternalLink,
   Headset,
   Mail,
   MessageCircle,
   Phone,
+  Send,
   ShieldCheck,
+  Users,
 } from "lucide-react";
-import { BANK_DETAILS } from "@/lib/learnearn-config";
+import type { LucideIcon } from "lucide-react";
+import { BANK_DETAILS, SUPPORT_LINKS } from "@/lib/learnearn-config";
 import { PageHeader } from "./page-header";
+
+type Network = {
+  title: string;
+  body: string;
+  action: string;
+  href: string;
+  icon: LucideIcon;
+  gradient: string;
+  glow: string;
+};
+
+/** Official community and live-agent destinations. */
+const NETWORKS: Network[] = [
+  {
+    title: "Telegram Channel",
+    body: "Join our Official Telegram Channel for daily updates and claim alerts.",
+    action: "Open Telegram",
+    href: SUPPORT_LINKS.telegram,
+    icon: Send,
+    gradient: "from-[#38BDF8] via-[#22D3EE] to-[#0EA5E9]",
+    glow: "rgba(34,211,238,0.5)",
+  },
+  {
+    title: "WhatsApp Channel",
+    body: "Follow our verified WhatsApp Channel to never miss a community event.",
+    action: "Follow channel",
+    href: SUPPORT_LINKS.whatsappChannel,
+    icon: Users,
+    gradient: "from-[#4ADE80] via-[#22C55E] to-[#16A34A]",
+    glow: "rgba(74,222,128,0.45)",
+  },
+  {
+    title: "Live Agent Support",
+    body: "Need direct help with an account funding or withdrawal issue? Chat with an admin on WhatsApp.",
+    action: `Chat with ${SUPPORT_LINKS.liveAgentNumber}`,
+    href: SUPPORT_LINKS.liveAgent,
+    icon: MessageCircle,
+    gradient: "from-[#A78BFA] via-[#8B5CF6] to-[#4F46E5]",
+    glow: "rgba(139,92,246,0.5)",
+  },
+];
 
 const CHANNELS = [
   {
@@ -55,6 +100,10 @@ const FAQS = [
     a: "Naira Codes are sold by our verified vendors. Once you buy one, enter it on the BUY Naira Code page and the value lands in your wallet immediately.",
   },
   {
+    q: "Do I have to pay anything to withdraw?",
+    a: "No. Withdrawing your balance is free and never requires a code, a fee or a transfer of any kind. If anyone asks you to pay to release a withdrawal, it is a scam — report it to us on live chat.",
+  },
+  {
     q: "Can I change my payout bank account?",
     a: "Yes. Reach out on live chat with your registered email and the new account details, and the desk will update it for you.",
   },
@@ -88,7 +137,63 @@ export function SupportView() {
         </div>
       </div>
 
-      <section className="mt-5 flex flex-col gap-2.5">
+      <section className="mt-5 flex flex-col gap-3">
+        {NETWORKS.map(({ title, body, action, href, icon: Icon, gradient, glow }, i) => (
+          <a
+            key={title}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group le-rise relative block rounded-[22px] p-px transition-transform duration-300 hover:-translate-y-1 active:scale-[0.985]"
+            style={{ animationDelay: `${80 + i * 70}ms` }}
+          >
+            <span
+              aria-hidden
+              className={`absolute inset-0 rounded-[22px] bg-gradient-to-br ${gradient} opacity-55 transition-opacity duration-300 group-hover:opacity-100`}
+            />
+            <span
+              aria-hidden
+              className="absolute -inset-1 rounded-[26px] opacity-0 blur-[18px] transition-opacity duration-300 group-hover:opacity-70"
+              style={{ backgroundColor: glow }}
+            />
+
+            <span className="le-grain relative flex items-start gap-3.5 rounded-[21px] bg-[#101017] p-4">
+              <span
+                className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br ${gradient} shadow-[0_10px_24px_-12px_rgba(0,0,0,0.9)] transition-transform duration-300 group-hover:scale-105`}
+              >
+                <Icon className="h-[19px] w-[19px] text-white" strokeWidth={2.1} />
+              </span>
+
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1.5">
+                  <span className="font-display text-[14px] font-bold tracking-[-0.01em] text-white">
+                    {title}
+                  </span>
+                  <ExternalLink
+                    className="h-3.5 w-3.5 shrink-0 text-white/30 transition-colors duration-300 group-hover:text-white/70"
+                    strokeWidth={2.2}
+                  />
+                </span>
+                <span className="mt-1 block text-[11.5px] leading-relaxed text-white/45">
+                  {body}
+                </span>
+                <span className="mt-2.5 inline-flex items-center gap-1 rounded-full border border-white/12 bg-white/[0.05] px-3 py-1.5 text-[11px] font-semibold text-white/75 transition-colors duration-300 group-hover:border-white/25 group-hover:text-white">
+                  {action}
+                </span>
+              </span>
+            </span>
+          </a>
+        ))}
+      </section>
+
+      <h2
+        className="le-rise mt-7 mb-3 font-display text-[15px] font-bold text-white"
+        style={{ animationDelay: "280ms" }}
+      >
+        Other ways to reach us
+      </h2>
+
+      <section className="flex flex-col gap-2.5">
         {CHANNELS.map(({ label, sub, icon: Icon, href, tint }, i) => (
           <a
             key={label}

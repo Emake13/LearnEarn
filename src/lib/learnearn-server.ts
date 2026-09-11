@@ -2,7 +2,7 @@ import "server-only";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { totalumSdk } from "@/lib/totalum";
-import { WELCOME_BALANCE } from "@/lib/learnearn-config";
+import { WELCOME_BALANCE, CLAIM_INTERVAL_MS } from "@/lib/learnearn-config";
 import type { MeProfile } from "@/types/learnearn";
 
 /** Raw shape of a row in the Totalum `user` table. */
@@ -16,6 +16,8 @@ export interface UserRecord {
   balance?: number;
   available_balance?: number;
   reward_claimed?: "yes" | "no";
+  /** ISO timestamp of the most recent daily reward claim. */
+  last_reward_claim_at?: string;
   current_tier?: string | { _id: string; name?: string };
 }
 
@@ -78,12 +80,26 @@ async function ensureUserDefaults(record: UserRecord): Promise<UserRecord> {
   return { ...record, ...(defaults as Partial<UserRecord>) };
 }
 
+/**
+ * Works out when the daily reward unlocks again.
+ * Returns null once the cooldown has elapsed (or was never started).
+ */
+export function nextClaimAt(record: UserRecord): string | null {
+  if (!record.last_reward_claim_at) return null;
+  const last = new Date(record.last_reward_claim_at).getTime();
+  if (Number.isNaN(last)) return null;
+  const next = last + CLAIM_INTERVAL_MS;
+  return next > Date.now() ? new Date(next).toISOString() : null;
+}
+
 /** Maps a raw user row into the client-facing profile shape. */
 export async function toMeProfile(record: UserRecord): Promise<MeProfile> {
   let tierName = record.level && record.level >= 2 ? "Pro" : "Beginner";
 
   const tier = record.current_tier;
   if (tier && typeof tier === "object" && tier.name) tierName = tier.name;
+
+  const next = nextClaimAt(record);
 
   return {
     id: record._id,
@@ -96,6 +112,8 @@ export async function toMeProfile(record: UserRecord): Promise<MeProfile> {
     availableBalance: record.available_balance ?? 0,
     rewardClaimed: record.reward_claimed === "yes",
     tierName,
+    nextClaimAt: next,
+    canClaim: next === null,
   };
 }
 
@@ -113,6 +131,8 @@ export async function applyWalletMovement(params: {
   status?: "completed" | "pending";
   /** When true the balance is left untouched and only the row is written. */
   recordOnly?: boolean;
+  /** Extra columns written onto the wallet_transaction row. */
+  extra?: Record<string, unknown>;
 }): Promise<{ balance: number; availableBalance: number }> {
   const {
     userId,
@@ -123,6 +143,7 @@ export async function applyWalletMovement(params: {
     currentAvailable,
     status = "completed",
     recordOnly = false,
+    extra,
   } = params;
 
   const nextBalance = recordOnly ? currentBalance : currentBalance + amount;
@@ -141,6 +162,7 @@ export async function applyWalletMovement(params: {
     transaction_type: type,
     amount,
     status,
+    ...(extra || {}),
   });
 
   console.log("[learnearn-server] wallet movement", {

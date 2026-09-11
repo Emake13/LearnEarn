@@ -1,10 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertCircle, Eye, EyeOff, Gift } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Gift, Loader2 } from "lucide-react";
 import { signUp } from "@/lib/auth-client";
 import { AuthField, AuthShell, AuthSubmit } from "@/components/learnearn/auth-shell";
+
+const DUPLICATE_MESSAGE =
+  "An account with this email already exists. Please log in instead.";
+
+/** True when Better Auth rejected the sign-up because the email is taken. */
+function isDuplicateEmail(error: any): boolean {
+  const code = String(error?.code || "").toUpperCase();
+  const message = String(error?.message || "").toLowerCase();
+  return (
+    error?.status === 422 ||
+    code.includes("USER_ALREADY_EXISTS") ||
+    code.includes("EMAIL_ALREADY") ||
+    message.includes("already exists") ||
+    message.includes("already registered") ||
+    message.includes("already in use") ||
+    message.includes("user already")
+  );
+}
 
 interface FieldErrors {
   name?: string;
@@ -22,7 +40,18 @@ export default function RegisterPage() {
   const [show, setShow] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState("");
+  const [duplicate, setDuplicate] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // On a duplicate email, show the alert briefly, then send them to sign in
+  // with the address already filled in.
+  useEffect(() => {
+    if (!duplicate) return;
+    const id = window.setTimeout(() => {
+      window.location.href = `/login?email=${encodeURIComponent(email.trim())}`;
+    }, 1800);
+    return () => window.clearTimeout(id);
+  }, [duplicate, email]);
 
   const clear = (key: keyof FieldErrors) => {
     if (errors[key]) setErrors((e) => ({ ...e, [key]: undefined }));
@@ -52,6 +81,7 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
+    setDuplicate(false);
     if (!validate()) return;
 
     setLoading(true);
@@ -66,9 +96,12 @@ export default function RegisterPage() {
 
       if (result.error) {
         console.error("[register] sign up failed:", result.error);
-        setFormError(
-          result.error.message || "Could not create your account. That email may already be in use."
-        );
+        if (isDuplicateEmail(result.error)) {
+          setDuplicate(true);
+          setFormError(DUPLICATE_MESSAGE);
+        } else {
+          setFormError(result.error.message || "Could not create your account.");
+        }
         setLoading(false);
         return;
       }
@@ -77,7 +110,12 @@ export default function RegisterPage() {
       window.location.href = "/";
     } catch (err: any) {
       console.error("[register] unexpected error:", err);
-      setFormError(err?.message || "Could not create your account. Please try again.");
+      if (isDuplicateEmail(err)) {
+        setDuplicate(true);
+        setFormError(DUPLICATE_MESSAGE);
+      } else {
+        setFormError(err?.message || "Could not create your account. Please try again.");
+      }
       setLoading(false);
     }
   };
@@ -102,10 +140,22 @@ export default function RegisterPage() {
         {formError && (
           <div
             role="alert"
-            className="flex items-start gap-2.5 rounded-2xl border border-[#F87171]/28 bg-[#F87171]/[0.09] p-3.5"
+            className="le-rise flex flex-col gap-3 rounded-2xl border border-[#F87171]/28 bg-[#F87171]/[0.09] p-3.5"
           >
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#F87171]" strokeWidth={2.2} />
-            <p className="text-[12px] leading-relaxed font-medium text-[#FCA5A5]">{formError}</p>
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#F87171]" strokeWidth={2.2} />
+              <p className="text-[12px] leading-relaxed font-medium text-[#FCA5A5]">{formError}</p>
+            </div>
+
+            {duplicate && (
+              <Link
+                href={`/login?email=${encodeURIComponent(email.trim())}`}
+                className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8B5CF6] via-[#7C4DFF] to-[#4F46E5] py-2.5 font-display text-[13px] font-bold text-white transition-all duration-300 hover:brightness-110 active:scale-[0.98]"
+              >
+                <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2.4} />
+                Taking you to sign in…
+              </Link>
+            )}
           </div>
         )}
 

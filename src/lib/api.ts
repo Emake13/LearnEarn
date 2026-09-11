@@ -19,7 +19,9 @@ async function request<T>(
   options?: RequestInit
 ): Promise<ApiResponse<T>> {
   try {
-    const res = await fetch(url, options);
+    // `no-store` keeps one signed-in user's responses out of the browser cache,
+    // so a different account signing in on the same device never sees them.
+    const res = await fetch(url, { cache: "no-store", ...options });
     const json = (await res.json()) as ApiResponse<T>;
     return json;
   } catch (err) {

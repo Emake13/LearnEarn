@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { clearClientState } from "@/lib/session-reset";
 import { AlertCircle, Eye, EyeOff } from "lucide-react";
 import { signIn } from "@/lib/auth-client";
 import { AuthField, AuthShell, AuthSubmit } from "@/components/learnearn/auth-shell";
@@ -11,7 +12,8 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
 
-  const [email, setEmail] = useState("");
+  // Prefilled when we bounce someone here from a duplicate registration.
+  const [email, setEmail] = useState(searchParams.get("email") || "");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
@@ -45,6 +47,7 @@ function LoginForm() {
       }
 
       console.log("[login] signed in, redirecting to", redirect);
+      clearClientState();
       setTimeout(() => {
         window.location.href = redirect;
       }, 400);

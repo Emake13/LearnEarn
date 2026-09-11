@@ -5,7 +5,7 @@
 /** Official bank account users transfer to when funding or upgrading. */
 export const BANK_DETAILS = {
   accountName: "Chika Onyeabor",
-  accountNumber: "9018312737",
+  accountNumber: "6568437314",
   bankName: "Moniepoint MFB",
 } as const;
 
@@ -13,11 +13,18 @@ export const BANK_DETAILS = {
 export const PAYMENT_INSTRUCTION =
   "To fund your account or complete your upgrade, make a direct bank transfer to the official account below. Please do not use OPay Bank for this transfer. Upload your receipt once completed.";
 
-/** Welcome balance credited to every new account. */
-export const WELCOME_BALANCE = 96000;
+/**
+ * Starting balance for a brand-new account.
+ * New accounts begin completely clean — nothing is credited until the user
+ * actually earns, claims or funds it.
+ */
+export const WELCOME_BALANCE = 0;
 
 /** One-off welcome bonus offered on the dashboard rewards banner. */
 export const WELCOME_REWARD = 96000;
+
+/** A withdrawal verification code stays valid for 10 minutes. */
+export const WITHDRAWAL_CODE_TTL_MS = 10 * 60 * 1000;
 
 /** Formats a Naira amount, e.g. 96000 -> "₦96,000.00" */
 export function formatNaira(value: number, withDecimals = true): string {

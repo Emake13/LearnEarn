@@ -16,7 +16,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { files } from "@assets/files";
-import { signOut } from "@/lib/auth-client";
+import { signOutAndReset } from "@/lib/session-reset";
 import { formatNaira } from "@/lib/learnearn-config";
 import { PageHeader } from "./page-header";
 import { useAppState } from "./app-state";
@@ -35,14 +35,8 @@ export function ProfileView() {
 
   const handleSignOut = async () => {
     setSigningOut(true);
-    try {
-      await signOut();
-      console.log("[ProfileView] signed out");
-      window.location.href = "/login";
-    } catch (err) {
-      console.error("[ProfileView] sign out failed:", err);
-      setSigningOut(false);
-    }
+    console.log("[ProfileView] signing out");
+    await signOutAndReset("/login");
   };
 
   return (

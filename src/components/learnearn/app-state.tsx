@@ -41,9 +41,21 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const refresh = useCallback(async () => {
     const res = await api.get<MeProfile>("/api/me");
     if (res.ok && res.data) {
-      setProfileState(res.data);
+      setProfileState((prev) => {
+        // A different account on this device gets a clean slate, never the
+        // previous user's balances, counters or ledger.
+        if (prev && prev.id !== res.data!.id) {
+          console.log("[AppState] account changed, resetting local state");
+          setBalanceHidden(false);
+          setTransactionsVersion((v) => v + 1);
+        }
+        return res.data!;
+      });
     } else {
+      // No valid session (or the call failed) — drop whatever we were holding
+      // rather than leaving the last user's data on screen.
       console.error("[AppState] could not load profile:", res.error);
+      setProfileState(null);
     }
     setLoading(false);
   }, []);

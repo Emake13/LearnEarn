@@ -18,6 +18,9 @@ export interface UserRecord {
   reward_claimed?: "yes" | "no";
   /** ISO timestamp of the most recent daily reward claim. */
   last_reward_claim_at?: string;
+  /** One-time code emailed to authorise a withdrawal. */
+  withdrawal_code?: string;
+  withdrawal_code_expires_at?: string;
   current_tier?: string | { _id: string; name?: string };
 }
 
@@ -69,14 +72,8 @@ async function ensureUserDefaults(record: UserRecord): Promise<UserRecord> {
 
   await totalumSdk.crud.editRecordById("user", record._id, defaults);
 
-  await totalumSdk.crud.createRecord("wallet_transaction", {
-    user: record._id,
-    title: "Welcome bonus",
-    transaction_type: "reward",
-    amount: WELCOME_BALANCE,
-    status: "completed",
-  });
-
+  // Deliberately no seeded transaction — a new account starts with an empty
+  // ledger so its history only ever reflects what this user actually did.
   return { ...record, ...(defaults as Partial<UserRecord>) };
 }
 
@@ -175,12 +172,21 @@ export async function applyWalletMovement(params: {
   return { balance: nextBalance, availableBalance: nextAvailable };
 }
 
+/**
+ * Every response here is scoped to one signed-in user, so it must never be
+ * reused for anyone else — including by the browser cache after a re-login.
+ */
+const NO_STORE = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, private",
+  Pragma: "no-cache",
+} as const;
+
 /** Standard JSON success envelope. */
 export function ok<T>(data: T, extra?: Record<string, unknown>) {
-  return Response.json({ ok: true, data, ...(extra || {}) });
+  return Response.json({ ok: true, data, ...(extra || {}) }, { headers: NO_STORE });
 }
 
 /** Standard JSON error envelope. */
 export function fail(message: string, status = 400) {
-  return Response.json({ ok: false, error: message }, { status });
+  return Response.json({ ok: false, error: message }, { status, headers: NO_STORE });
 }

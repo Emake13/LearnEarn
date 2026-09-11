@@ -10,6 +10,8 @@ import {
   Clock3,
   Copy,
   Loader2,
+  MailCheck,
+  Send,
   ShieldCheck,
 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -27,6 +29,7 @@ interface FieldErrors {
   accountNumber?: string;
   accountName?: string;
   bankName?: string;
+  verificationCode?: string;
 }
 
 /** Floating-label glass input used by every field on this form. */
@@ -136,6 +139,9 @@ export function WithdrawView() {
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
   const [bankName, setBankName] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [sendingCode, setSendingCode] = useState(false);
+  const [codeSentTo, setCodeSentTo] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -163,6 +169,9 @@ export function WithdrawView() {
     if (!bankName) {
       next.bankName = "Choose the receiving bank.";
     }
+    if (!verificationCode.trim()) {
+      next.verificationCode = "Enter the code we emailed you.";
+    }
 
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -183,6 +192,7 @@ export function WithdrawView() {
         accountNumber,
         accountName: accountName.trim(),
         bankName,
+        verificationCode: verificationCode.trim(),
       }
     );
 
@@ -195,6 +205,27 @@ export function WithdrawView() {
       setFormError(String(res.error || "Could not submit your withdrawal."));
     }
     setSubmitting(false);
+  };
+
+  const handleSendCode = async () => {
+    if (sendingCode) return;
+    setSendingCode(true);
+    setFormError("");
+    console.log("[WithdrawView] requesting a withdrawal verification code");
+
+    const res = await api.post<{ sentTo: string; expiresInMinutes: number }>(
+      "/api/wallet/verification-code",
+      {}
+    );
+
+    if (res.ok && res.data) {
+      setCodeSentTo(res.data.sentTo);
+      setErrors((e) => ({ ...e, verificationCode: undefined }));
+    } else {
+      console.error("[WithdrawView] could not send code:", res.error);
+      setFormError(String(res.error || "Could not send your verification code."));
+    }
+    setSendingCode(false);
   };
 
   const copyReference = async () => {
@@ -412,6 +443,41 @@ export function WithdrawView() {
           )}
         </div>
 
+        <div>
+          <FloatingField
+            id="wd-code"
+            label="Security Verification Code"
+            value={verificationCode}
+            onChange={(v) => setVerificationCode(v.toUpperCase())}
+            maxLength={19}
+            error={errors.verificationCode}
+          />
+
+          <button
+            type="button"
+            onClick={handleSendCode}
+            disabled={sendingCode}
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-[#8B5CF6]/30 bg-[#8B5CF6]/[0.09] py-2.5 text-[12px] font-semibold text-[#C4B5FD] transition-all duration-300 hover:bg-[#8B5CF6]/[0.16] hover:text-white active:scale-[0.98] disabled:opacity-60"
+          >
+            {sendingCode ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2.3} />
+            ) : (
+              <Send className="h-3.5 w-3.5" strokeWidth={2.3} />
+            )}
+            {sendingCode ? "Sending…" : "Email me a code"}
+          </button>
+
+          {codeSentTo && (
+            <p
+              role="status"
+              className="mt-2 flex items-center gap-1.5 pl-1 text-[11px] font-medium text-[#4ADE80]"
+            >
+              <MailCheck className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />
+              Code sent to {codeSentTo}. It expires in 10 minutes.
+            </p>
+          )}
+        </div>
+
         {formError && (
           <div
             role="alert"
@@ -448,9 +514,10 @@ export function WithdrawView() {
       >
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#A78BFA]" strokeWidth={2.1} />
         <p className="text-[11.5px] leading-relaxed text-white/55">
+          The verification code is free and is emailed to the address on your account.
           Requests are reviewed by our payouts desk, normally within 24 hours. We will
-          never ask you to pay a fee to release a withdrawal — if anyone does, report it
-          on the{" "}
+          never sell you a code or charge a fee to release a withdrawal — if anyone asks
+          you to pay, it is a scam. Report it on the{" "}
           <Link
             href="/support"
             className="font-semibold text-[#C4B5FD] underline underline-offset-2"

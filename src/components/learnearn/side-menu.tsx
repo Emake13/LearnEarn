@@ -9,7 +9,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { signOut } from "@/lib/auth-client";
+import { signOutAndReset } from "@/lib/session-reset";
 import { files } from "@assets/files";
 import { Logo } from "./logo";
 import { useAppState } from "./app-state";
@@ -50,13 +50,7 @@ export function SideMenu() {
   const handleSignOut = async () => {
     setSigningOut(true);
     console.log("[SideMenu] signing out");
-    try {
-      await signOut();
-      window.location.href = "/login";
-    } catch (err) {
-      console.error("[SideMenu] sign out failed:", err);
-      setSigningOut(false);
-    }
+    await signOutAndReset("/login");
   };
 
   const go = (href: string) => {

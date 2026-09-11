@@ -1,20 +1,31 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
 import { useAppState } from "./app-state";
 
-/** Returns "morning" / "afternoon" / "evening" for the current local time. */
+/** Returns the time-of-day greeting for the device's current local hour. */
 function greetingFor(date: Date): string {
   const h = date.getHours();
   if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
+  if (h < 17) return "Good afternoon";
   return "Good evening";
 }
 
 /** Greeting line + level pill + inline upgrade link. */
 export function WelcomeHeader() {
   const { profile } = useAppState();
+
+  // Read on mount (client-side) so this reflects the visitor's own device
+  // clock/timezone, not any server-rendered time; refreshed every minute so
+  // it flips morning -> afternoon -> evening live without a page reload.
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Only the first name keeps the greeting on one line.
   const firstName = (profile?.name || "there").split(" ")[0];
@@ -24,7 +35,7 @@ export function WelcomeHeader() {
   return (
     <section className="le-rise pt-5" style={{ animationDelay: "60ms" }}>
       <h1 className="font-display text-[22px] font-bold leading-tight tracking-[-0.02em] text-white">
-        {greetingFor(new Date())}, {firstName}{" "}
+        {now ? greetingFor(now) : "Hello"}, {firstName}{" "}
         <span className="inline-block origin-[70%_70%] animate-[le-float_3.5s_ease-in-out_infinite]">
           👋
         </span>

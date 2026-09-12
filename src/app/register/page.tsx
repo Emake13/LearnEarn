@@ -8,6 +8,7 @@ import { AuthField, AuthShell, AuthSubmit } from "@/components/learnearn/auth-sh
 
 const DUPLICATE_MESSAGE =
   "An account with this email already exists. Please log in instead.";
+const SIGNUP_TIMEOUT_MS = 60_000;
 
 /** True when Better Auth rejected the sign-up because the email is taken. */
 function isDuplicateEmail(error: any): boolean {
@@ -85,7 +86,7 @@ export default function RegisterPage() {
           referral_code: referral.trim().toUpperCase(),
         } as any),
         new Promise<never>((_, reject) =>
-          window.setTimeout(() => reject(new Error("SIGNUP_TIMEOUT")), 15000),
+          window.setTimeout(() => reject(new Error("SIGNUP_TIMEOUT")), SIGNUP_TIMEOUT_MS),
         ),
       ]);
 
@@ -101,10 +102,9 @@ export default function RegisterPage() {
         return;
       }
 
-      // Keep the success state visible for four seconds, then let the
-      // server-rendered home page read the newly created session.
-      await new Promise((resolve) => window.setTimeout(resolve, 4000));
-      window.location.href = "/";
+      // The sign-up response has already set the session cookie. Navigate
+      // immediately so the server-rendered home page can load the dashboard.
+      window.location.assign("/");
     } catch (err: any) {
       console.error("[register] sign up failed:", err);
       if (isDuplicateEmail(err)) {

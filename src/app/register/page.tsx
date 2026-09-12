@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { AlertCircle, Eye, EyeOff, Gift, Loader2 } from "lucide-react";
 import { signUp } from "@/lib/auth-client";
@@ -43,16 +43,6 @@ export default function RegisterPage() {
   const [duplicate, setDuplicate] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // On a duplicate email, show the alert briefly, then send them to sign in
-  // with the address already filled in.
-  useEffect(() => {
-    if (!duplicate) return;
-    const id = window.setTimeout(() => {
-      window.location.href = `/login?email=${encodeURIComponent(email.trim())}`;
-    }, 1800);
-    return () => window.clearTimeout(id);
-  }, [duplicate, email]);
-
   const clear = (key: keyof FieldErrors) => {
     if (errors[key]) setErrors((e) => ({ ...e, [key]: undefined }));
   };
@@ -86,13 +76,18 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      const result = await signUp.email({
-        email: email.trim(),
-        password,
-        name: name.trim(),
-        phone: phone.trim(),
-        referral_code: referral.trim().toUpperCase(),
-      } as any);
+      const result = await Promise.race([
+        signUp.email({
+          email: email.trim(),
+          password,
+          name: name.trim(),
+          phone: phone.trim(),
+          referral_code: referral.trim().toUpperCase(),
+        } as any),
+        new Promise<never>((_, reject) =>
+          window.setTimeout(() => reject(new Error("SIGNUP_TIMEOUT")), 15000),
+        ),
+      ]);
 
       if (result.error) {
         console.error("[register] sign up failed:", result.error);
@@ -100,21 +95,25 @@ export default function RegisterPage() {
           setDuplicate(true);
           setFormError(DUPLICATE_MESSAGE);
         } else {
-          setFormError(result.error.message || "Could not create your account.");
+          setFormError("Could not create your account. Please check your details and try again.");
         }
         setLoading(false);
         return;
       }
 
-      console.log("[register] account created, entering dashboard");
+      // Keep the success state visible for four seconds, then let the
+      // server-rendered home page read the newly created session.
+      await new Promise((resolve) => window.setTimeout(resolve, 4000));
       window.location.href = "/";
     } catch (err: any) {
-      console.error("[register] unexpected error:", err);
+      console.error("[register] sign up failed:", err);
       if (isDuplicateEmail(err)) {
         setDuplicate(true);
         setFormError(DUPLICATE_MESSAGE);
+      } else if (err?.message === "SIGNUP_TIMEOUT") {
+        setFormError("Creating your account took too long. Please try again.");
       } else {
-        setFormError(err?.message || "Could not create your account. Please try again.");
+        setFormError("Could not create your account. Please check your details and try again.");
       }
       setLoading(false);
     }

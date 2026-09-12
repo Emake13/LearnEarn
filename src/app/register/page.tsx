@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertCircle, Eye, EyeOff, Gift, Loader2 } from "lucide-react";
-import { signUp } from "@/lib/auth-client";
+import { signIn, signUp } from "@/lib/auth-client";
 import { AuthField, AuthShell, AuthSubmit } from "@/components/learnearn/auth-shell";
 
 const DUPLICATE_MESSAGE =
@@ -21,6 +21,19 @@ function isDuplicateEmail(error: any): boolean {
     message.includes("already registered") ||
     message.includes("already in use") ||
     message.includes("user already")
+  );
+}
+
+/**
+ * True when the response never made it back — the request was cut off, not
+ * rejected. The account may well have been written before the connection died.
+ */
+function isLostResponse(error: any): boolean {
+  const status = Number(error?.status ?? 0);
+  if ([0, 408, 500, 502, 503, 504].includes(status)) return true;
+  const message = String(error?.message || "").toLowerCase();
+  return ["fetch", "network", "timeout", "timed out", "aborted", "gateway"].some(
+    (token) => message.includes(token)
   );
 }
 
@@ -78,6 +91,28 @@ export default function RegisterPage() {
     return Object.keys(next).length === 0;
   };
 
+  /**
+   * A lost sign-up response does not mean the sign-up failed — the account row
+   * is written before the response is sent back. Signing in with the very same
+   * credentials confirms whether it landed and gets the user to the dashboard
+   * instead of leaving them stuck on an error they cannot act on.
+   */
+  const enterWithNewCredentials = async (): Promise<boolean> => {
+    try {
+      const result = await signIn.email({ email: email.trim(), password });
+      if (result.error) {
+        console.error("[register] recovery sign-in rejected:", result.error);
+        return false;
+      }
+      console.log("[register] recovered a lost sign-up response, entering dashboard");
+      window.location.href = "/";
+      return true;
+    } catch (err) {
+      console.error("[register] recovery sign-in failed:", err);
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
@@ -96,12 +131,17 @@ export default function RegisterPage() {
 
       if (result.error) {
         console.error("[register] sign up failed:", result.error);
+
         if (isDuplicateEmail(result.error)) {
           setDuplicate(true);
           setFormError(DUPLICATE_MESSAGE);
-        } else {
-          setFormError(result.error.message || "Could not create your account.");
+          setLoading(false);
+          return;
         }
+
+        if (isLostResponse(result.error) && (await enterWithNewCredentials())) return;
+
+        setFormError(result.error.message || "Could not create your account.");
         setLoading(false);
         return;
       }
@@ -110,12 +150,20 @@ export default function RegisterPage() {
       window.location.href = "/";
     } catch (err: any) {
       console.error("[register] unexpected error:", err);
+
       if (isDuplicateEmail(err)) {
         setDuplicate(true);
         setFormError(DUPLICATE_MESSAGE);
-      } else {
-        setFormError(err?.message || "Could not create your account. Please try again.");
+        setLoading(false);
+        return;
       }
+
+      // A thrown request is always a lost response rather than a rejection.
+      if (await enterWithNewCredentials()) return;
+
+      setFormError(
+        "We couldn't confirm your account was created. Please try signing in — if that doesn't work, register again."
+      );
       setLoading(false);
     }
   };

@@ -31,9 +31,8 @@ export function Landing() {
           <h1 className="mt-5 font-display text-[38px] leading-[1.08] font-extrabold tracking-[-0.035em] text-white">
             Turn what you
             <br />
-            learn into
+            learn into{" "}
             <span className="bg-gradient-to-r from-[#A78BFA] via-[#8B5CF6] to-[#22D3EE] bg-clip-text text-transparent">
-              {" "}
               earnings
             </span>
             .

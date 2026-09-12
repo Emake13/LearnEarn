@@ -16,7 +16,9 @@ const effectiveUrl =
 export const auth = betterAuth({
   // Database adapter
   database: totalumAdapter(totalumSdk, {
-    debugLogs: true,
+    // Per-query logging is useful locally but adds real latency to every
+    // auth call in production, where sign-up is already the slowest path.
+    debugLogs: process.env.NODE_ENV !== "production",
   }),
 
   // Email and password authentication
@@ -95,7 +97,11 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24, // Update session once per day
     cookieCache: {
       enabled: true,
-      maxAge: 30, // 30 seconds - reduced for faster role/permission updates
+      // Reads the session from the signed cookie instead of hitting the
+      // database on every request. At 30s nearly every page load paid for a
+      // session round-trip, which is what made the first post-sign-up
+      // dashboard render slow enough to time out.
+      maxAge: 60 * 5,
     },
   },
 

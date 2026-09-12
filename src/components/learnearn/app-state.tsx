@@ -8,8 +8,16 @@ import {
   useMemo,
   useState,
 } from "react";
+import { usePathname } from "next/navigation";
 import { api } from "@/lib/api";
 import type { MeProfile } from "@/types/learnearn";
+
+/**
+ * Routes that are always signed-out, so the profile call there is guaranteed
+ * to 401. Skipping it keeps the auth screens snappy — it was one more request
+ * competing with sign-up on the slowest page in the app.
+ */
+const SIGNED_OUT_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
 
 interface AppState {
   profile: MeProfile | null;
@@ -33,13 +41,28 @@ const Ctx = createContext<AppState | null>(null);
  * user moves between routes. Mounted once in the app shell.
  */
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const skipProfileFetch = SIGNED_OUT_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(route + "/")
+  );
+
   const [profile, setProfileState] = useState<MeProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [balanceHidden, setBalanceHidden] = useState(false);
   const [transactionsVersion, setTransactionsVersion] = useState(0);
 
   const refresh = useCallback(async () => {
-    const res = await api.get<MeProfile>("/api/me");
+    let res = await api.get<MeProfile>("/api/me");
+
+    // A cold serverless start right after sign-up can drop the very first
+    // profile call. Retry once on a server/network failure — but never on a
+    // 401, which is a genuine signed-out state, not a blip.
+    if (!res.ok && res.status !== 401) {
+      console.warn("[AppState] profile call failed, retrying once:", res.error);
+      await new Promise((r) => setTimeout(r, 1200));
+      res = await api.get<MeProfile>("/api/me");
+    }
+
     if (res.ok && res.data) {
       setProfileState((prev) => {
         // A different account on this device gets a clean slate, never the
@@ -61,8 +84,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (skipProfileFetch) {
+      setLoading(false);
+      return;
+    }
     void refresh();
-  }, [refresh]);
+  }, [refresh, skipProfileFetch]);
 
   const value = useMemo<AppState>(
     () => ({

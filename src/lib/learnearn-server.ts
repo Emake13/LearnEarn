@@ -48,6 +48,28 @@ export async function getCurrentUser(): Promise<UserRecord | null> {
 }
 
 /**
+ * The level-1 tier row never changes, so it is looked up once per server
+ * instance instead of on every new account's first dashboard load.
+ */
+let beginnerTierIdPromise: Promise<string | null> | null = null;
+
+function getBeginnerTierId(): Promise<string | null> {
+  if (!beginnerTierIdPromise) {
+    beginnerTierIdPromise = totalumSdk.crud
+      .query("upgrade_tier", { _filter: { level: 1 }, _limit: 1 })
+      .then((res) => ((res.data as any[])?.[0]?._id as string) ?? null)
+      .catch((err) => {
+        // A missing tier must not block the account from opening — retry on
+        // the next call rather than caching the failure.
+        console.error("[learnearn-server] beginner tier lookup failed:", err);
+        beginnerTierIdPromise = null;
+        return null;
+      });
+  }
+  return beginnerTierIdPromise;
+}
+
+/**
  * Gives brand-new accounts their starting level, tier and welcome balance.
  * Idempotent — only runs when `level` has never been set.
  */
@@ -56,11 +78,7 @@ async function ensureUserDefaults(record: UserRecord): Promise<UserRecord> {
 
   console.log("[learnearn-server] initialising new user wallet:", record._id);
 
-  const tiersResult = await totalumSdk.crud.query("upgrade_tier", {
-    _filter: { level: 1 },
-    _limit: 1,
-  });
-  const beginnerTier = (tiersResult.data as any[])?.[0];
+  const beginnerTierId = await getBeginnerTierId();
 
   const defaults: Record<string, unknown> = {
     level: 1,
@@ -68,7 +86,7 @@ async function ensureUserDefaults(record: UserRecord): Promise<UserRecord> {
     available_balance: WELCOME_BALANCE,
     reward_claimed: "no",
   };
-  if (beginnerTier?._id) defaults.current_tier = beginnerTier._id;
+  if (beginnerTierId) defaults.current_tier = beginnerTierId;
 
   await totalumSdk.crud.editRecordById("user", record._id, defaults);
 
